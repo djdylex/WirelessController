@@ -13,7 +13,7 @@ void sigchild_handler(int s) {
 }
 
 int main(void) {
-	int sockfd, newFd;
+	int sockfd, clientfd;
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr;
 	socklen_t sinSize;
@@ -32,5 +32,49 @@ int main(void) {
 		return 1;
 	}
 
-	
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+			perror("socket issue");
+			continue;
+		}
+
+		if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+			perror("setsockopt");
+			exit(1);
+		}
+
+		if(bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("bind");
+			continue;
+		}
+
+		break;
+	}
+
+	freeaddrinfo(servinfo);
+
+	if (p == NULL) {
+		fprintf("stderr, "couldnt bind");
+		exit(1);
+	}
+
+	if (listen(sockfd, 8) == -1) {
+		perror("listener");
+		exit(1);
+	}
+
+	printf("waiting for connection\n";
+
+	while(1) {
+		sin_size = sizeof their_addr;
+		newfd = accept(sockfd, (struct sockaddr*)&their_addr, &sin_size);
+		if (new_fd == -1) {
+			perror("accepting");
+			continue;
+		}
+		
+		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), s, sizeof s);
+		printf("connection from: %s\n", s);
+	}
 }
