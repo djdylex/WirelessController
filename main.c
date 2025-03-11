@@ -3,26 +3,35 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <unistd.h>
 
-void sigchild_handler(int s) {
-	int existing_err = errno;
+#define PORT "3300"
 
-	while (waitpid(-1, NULL, WNOHANG) > 0);
+void* get_in_addr(struct sockaddr *sa) {
+	if (sa ->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
 
-	errno = saved_errno;
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 int main(void) {
 	int sockfd, clientfd;
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr;
-	socklen_t sinSize;
+	socklen_t sin_size;
 	struct sigaction sa;
 	int yes = 1;
 	char s[INET6_ADDRSTRLEN];
 	int rv;
 
-	memset(&hints, 0, sizeof hints)
+	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
@@ -46,8 +55,7 @@ int main(void) {
 		if(bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
 			close(sockfd);
 			perror("bind");
-			continue;
-		}
+			continue;}
 
 		break;
 	}
@@ -55,7 +63,7 @@ int main(void) {
 	freeaddrinfo(servinfo);
 
 	if (p == NULL) {
-		fprintf("stderr, "couldnt bind");
+		fprintf(stderr, "couldnt bind");
 		exit(1);
 	}
 
@@ -64,17 +72,21 @@ int main(void) {
 		exit(1);
 	}
 
-	printf("waiting for connection\n";
+	printf("waiting for connection\n");
 
 	while(1) {
 		sin_size = sizeof their_addr;
-		newfd = accept(sockfd, (struct sockaddr*)&their_addr, &sin_size);
-		if (new_fd == -1) {
+		clientfd = accept(sockfd, (struct sockaddr*)&their_addr, &sin_size);
+		if (clientfd == -1) {
 			perror("accepting");
 			continue;
 		}
 		
 		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), s, sizeof s);
 		printf("connection from: %s\n", s);
+
+		if (send(clientfd, "HELLO YOU ARE CONNECTED!", 24, 0) == -1)
+			perror("send");
+		close(clientfd);
 	}
 }
