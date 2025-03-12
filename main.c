@@ -13,6 +13,12 @@
 
 #define PORT "3300"
 
+typedef struct {
+	int messageType;
+	float yawRate;
+	float pitchRate;
+} RateMessage;
+
 void* get_in_addr(struct sockaddr *sa) {
 	if (sa ->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
@@ -84,9 +90,22 @@ int main(void) {
 		
 		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), s, sizeof s);
 		printf("connection from: %s\n", s);
+		
+		char buf[128];
+		
+		if (recv(clientfd, buf, 128, 0) <= 0) {
+			printf("issue reading, moving on");
+			close(clientfd);
+			continue;
+		}
 
-		if (send(clientfd, "HELLO YOU ARE CONNECTED!", 24, 0) == -1)
-			perror("send");
+		RateMessage rm;
+		memcpy(&rm, buf, sizeof(RateMessage));
+
+		printf("Recieved: %d, %f, %f\n", rm.messageType, rm.yawRate, rm.pitchRate);
+
+		//if (send(clientfd, "HELLO YOU ARE CONNECTED!", 24, 0) == -1)
+		//	perror("send");
 		close(clientfd);
 	}
 }
